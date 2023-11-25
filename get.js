@@ -3,65 +3,52 @@ const request = require('request');
 const readlineSync = require('readline-sync');
 const fs = require('fs-extra');
 
-var where = readlineSync.question('[?] File: ')
-  const file = fs.readFileSync(`${where}.txt`, 'utf-8');
-  const splitFile = file.split('\r\n');
-  console.log(`[ Total ${splitFile.length} Account]\n`)
-  
-  for (i in splitFile) {
+const where = readlineSync.question('[?] File: ');
+const file = fs.readFileSync(`${where}.txt`, 'utf-8');
+const splitFile = file.split('\r\n');
+console.log(`[ Total ${splitFile.length} Account]\n`);
 
-                     var files = fs.readFileSync(`${where}.txt`, 'utf-8');
-                    var lines = files.split('\n')
-                    lines.splice(0,1)
-            
-                    var parse = splitFile[i].split('|')[0];
-                    var wallet = splitFile[i].split('|')[1];
+function fetchDataFromAddress(address, url, callback) {
+    request({
+        method: 'GET',
+        url: url,
+    }, (err, res, body) => {
+        if (err) {
+            return callback(err, null);
+        }
 
-const address  = parse
-request({
-    method: 'GET',
-    url: `https://bscscan.com/address/${address}`
+        const $ = cheerio.load(body);
+        const data = $('#ContentPlaceHolder1_divSummary > div.row.mb-4 > div.col-md-6.mb-3.mb-md-0 > div > div.card-body > div:nth-child(3) > div.col-md-8').text();
 
-}, (err, res, body) => {
+        callback(null, data);
+    });
+}
 
-    if (err) return console.error(err);
+for (const item of splitFile) {
+    const parse = item.split('|')[0];
+    const address = parse.trim();
 
-    let $ = cheerio.load(body);
+    fetchDataFromAddress(address, `https://bscscan.com/address/${address}`, (err, bscData) => {
+        if (err) {
+            console.error('Error fetching BSC data:', err);
+        } else {
+            console.log('BSC Data:', bscData);
+        }
+    });
 
-    let bsc = $('#ContentPlaceHolder1_divSummary > div.row.mb-4 > div.col-md-6.mb-3.mb-md-0 > div > div.card-body > div:nth-child(3) > div.col-md-8');
+    fetchDataFromAddress(address, `https://etherscan.io/address/${address}`, (err, ethData) => {
+        if (err) {
+            console.error('Error fetching ETH data:', err);
+        } else {
+            console.log('ETH Data:', ethData);
+        }
+    });
 
-    console.log(bsc.text());
-});
-
-
-request({
-    method: 'GET',
-    url: `https://etherscan.io/address/${address}`
-}, (err, res, body) => {
-
-    if (err) return console.error(err);
-
-    let $ = cheerio.load(body);
-
-    let eth = $('#ContentPlaceHolder1_divSummary > div.row.mb-4 > div.col-md-6.mb-3.mb-md-0 > div > div.card-body > div:nth-child(3) > div.col-md-8');
-
-    console.log(eth.text());
-});
-
-
-
-request({
-    method: 'GET',
-    url: `https://polygonscan.com/address/${address}`
-}, (err, res, body) => {
-
-    if (err) return console.error(err);
-
-    let $ = cheerio.load(body);
-
-    let mtc = $('#ContentPlaceHolder1_divSummary > div.row.mb-4 > div.col-md-6.mb-3.mb-md-0 > div > div.card-body > div:nth-child(3) > div.col-md-8');
-
-    console.log(mtc.text());
-});
-
+    fetchDataFromAddress(address, `https://polygonscan.com/address/${address}`, (err, mtcData) => {
+        if (err) {
+            console.error('Error fetching MTC data:', err);
+        } else {
+            console.log('MTC Data:', mtcData);
+        }
+    });
 }
